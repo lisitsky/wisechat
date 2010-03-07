@@ -119,7 +119,7 @@ conn_manager(CurrentClients) ->
 			Ref = erlang:monitor(process, Pid),
 			% Ref = 0,
 			io:fwrite("Process ~w added to client manager monitoring with ref ~w~n", [Pid, Ref]),
-			NewClients = CurrentClients ++ [{Ref, Pid}],
+			NewClients = CurrentClients ++ [#client{pid=Pid, ref=Ref}],
 			conn_manager(NewClients);
 		{send_list, Pid} ->
 			Pid ! CurrentClients,
@@ -128,7 +128,7 @@ conn_manager(CurrentClients) ->
 			io:fwrite("Curr clients: ~w~n", [CurrentClients]),
 			conn_manager(CurrentClients);
 		{bcast, Msg} ->
-			[Pid ! {send, Msg} || {_Ref, Pid} <- CurrentClients],
+			[Client#client.pid ! {send, Msg} || Client <- CurrentClients],
 			conn_manager(CurrentClients);
 		{quit} ->
 			io:fwrite("Conn Manager quit ~n");
@@ -136,7 +136,7 @@ conn_manager(CurrentClients) ->
 			% working process goes down
 			io:fwrite("Process ~w (Ref ~w) is down because of ~w~n", [Pid, Ref, Reason]),
 			erlang:demonitor(Ref),
-			NewClients = lists:filter(fun(X) -> {X1, _X2} = X, X1 =/= Ref end, CurrentClients),
+			NewClients = lists:filter(fun(X) -> X#client.ref =/= Ref end, CurrentClients),
 			conn_manager(NewClients);
 			% NewClients = [X || X <- CurrentClients, {_, FindRef} = X, FindRef /= Ref] ;
 		Ignore ->
