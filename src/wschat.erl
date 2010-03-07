@@ -13,6 +13,17 @@
 -define(ub(X), unicode:characters_to_binary(X)).
 
 %%
+%% Records
+%%
+-record(client,
+	{
+		pid,	%  Process handling websocket connection
+		ref,	%  Ref to process for monitoring
+		name=""	%  Client name
+	}
+).
+
+%%
 %% Exported Functions
 %%
 -export([stop/0, start/1]).
