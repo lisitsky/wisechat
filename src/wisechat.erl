@@ -1,7 +1,8 @@
 %% Author: e
 %% Created: 19.02.2010
 %% Description: TODO: Add description to wschat
--module(wschat).
+-module(wisechat).
+%-behavior(application).
 
 %%
 %% Include files
