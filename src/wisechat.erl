@@ -167,7 +167,9 @@ conn_manager(CurrentClients) ->
 			NewClients = CurrentClients ++ [#client{pid=Pid, ref=Ref}],
 			conn_manager(NewClients);
 		{send_list, Pid} ->
-			Pid ! CurrentClients,
+			% Send clients list to user
+			ClientsDisp = [Client#client.name || Client <- CurrentClients],
+			Pid ! ClientsDisp,
 			conn_manager(CurrentClients);
 		{print_list} ->
 			io:fwrite("Curr clients: ~w~n", [CurrentClients]),
