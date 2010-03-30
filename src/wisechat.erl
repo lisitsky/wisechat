@@ -27,11 +27,15 @@
 %%
 %% Exported Functions
 %%
--export([stop/0, start/1]).
+-export([stop/0, start/1, start_work/1, stop_work/1]).
 
 %%
 %% API Functions
 %%
+%start(StartType, StartArgs) ->       % {ok, Pid} | {ok, Pid, State}
+%	Pid = start(8000),
+%	{ok, Pid}.
+
 
 %%
 %% TODO: Add description of stop/function_arity
@@ -44,15 +48,55 @@ start(Port) ->
 		{port, Port}, 
 		{loop, fun(Req) -> handle_http(Req, Port) end}, 
 		{ws_loop, fun(Ws) -> handle_websocket_start(Ws) end}
-	]).
+	]),
+	Conn_Manager.
+
+%%
+%% functions for running program
+%%
+start_work([Arg]) ->
+	Port = list_to_integer(atom_to_list(Arg)),
+	%io:format("Start_work started on port ~w ~n", [Port]),
+	register(main_proc, self()),
+	start(Port),
+	continue_work().
+
+continue_work() ->
+	receive
+		quit ->
+			io:format("Main_work proc got quit message: ~n"),
+			ok;
+		Else ->
+			io:format("Main_work proc got unknown message: ~w ~n", [Else]),
+			continue_work()
+	end.
+
 
 %%
 %% TODO: Add description of stop/function_arity
 %%
 stop() ->
+	io:format("Stopping.."),
 	conn_mgr ! {quit},
-	misultin:stop().
+	main_proc ! quit,
+	misultin:stop(),
+	ok.
 
+%%
+%% Stop the node from Joe's recipe.
+%%
+stop_work([Node]) ->
+	io:format("Stop: ~p~n",[Node]),
+	case net_adm:ping(Node) of
+		pong ->
+			ok;
+		pang ->
+			io:format("There is no node with this name~n")
+	end,
+	% rcp:call(Node, wisechat, stop, []),
+	spawn(Node, wisechat, stop, []),
+	rpc:cast(Node, init, stop, []),
+	init:stop().
 
 %%
 %% Local Functions
