@@ -200,18 +200,18 @@ handle_websocket_start(Ws) ->
 handle_websocket(Ws) ->
 	receive
 		{browser, Data} ->
-			io:fwrite("Got Data: ~p~n", [Data]),
+			io:format("Got Data: ~p~n", [Data]),
 			Ws:send(["received '", Data, "'"]),
 			conn_mgr ! {bcast, Data},
 			_Z = xopt(Ws, Data),
 			handle_websocket(Ws);
 		{send, Data} ->
-			io:fwrite("Got Data for send: ~p~n", [Data]),
+			io:format("Got Data for send: ~p~n", [Data]),
 			Ws:send([Data]),
 			handle_websocket(Ws);			
 		_Ignore ->
 			Str = io_lib:format("Got msg _Ignore: ~p~n", [_Ignore]), 
-			io:write(Str),
+			% io:write(Str),
 			Ws:send([Str]),
 			handle_websocket(Ws)
 	after 5000 ->
