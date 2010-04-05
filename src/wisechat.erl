@@ -11,8 +11,17 @@
 %%
 %% Some defines for comfortable work
 %%
+-define(SERVERNAME, "WiseChat").
+
+-define(VSN, "0.0.1").
+
 -define(ub(X), unicode:characters_to_binary(X)).
 
+%% for debug
+%% Write debug:
+-define(D(Msg), util:write_debug(Msg, ?LINE, ?FILE)).
+% -define(D2(Fmt, Data), util:write_debug(Fmt, ?LINE, ?FILE)).
+		
 %%
 %% Records
 %%
@@ -21,13 +30,19 @@
 		pid,	%  Process handling websocket connection
 		ref,	%  Ref to process for monitoring
 		name=""	%  Client name
-	}
-).
+	}).
 
 %%
 %% Exported Functions
 %%
 -export([stop/0, start/1, start_work/1, stop_work/1]).
+
+%% Write debug:
+%% write_debug(Msg) ->
+%% 	Now = erlang:now(),
+%% 	{{Year, Month, Day}, {H, M, S}} = calendar:now_to_local_time(Now),
+%% 	io:format("[~p-~p-~p ~p:~p:~p] ~p in ~p at ~p~n", 
+%% 				[Year, Month, Day, H, M, S, Msg, ?FILE, ?LINE]).
 
 %%
 %% API Functions
@@ -42,7 +57,10 @@
 %%
 start(Port) ->
 	Conn_Manager = spawn(fun() -> conn_manager() end),
-	io:fwrite("Conn Manager Pid: ~w~n", [Conn_Manager]),
+	% io:fwrite("Conn Manager Pid: ~w~n", [Conn_Manager]),
+	% ?D1(io_lib:format("Conn Manager Pid: ~p~n", [Conn_Manager])),
+	?D({"Conn Manager Pid: ~p", [Conn_Manager]}),
+	% ?D("Conn Manager Pid"),
 	register(conn_mgr, Conn_Manager),
 	misultin:start_link([
 		{port, Port}, 
@@ -64,10 +82,10 @@ start_work([Arg]) ->
 continue_work() ->
 	receive
 		quit ->
-			io:format("Main_work proc got quit message: ~n"),
+			?D("Main_work proc got quit message"),
 			ok;
 		Else ->
-			io:format("Main_work proc got unknown message: ~w ~n", [Else]),
+			?D({"Main_work proc got unknown message: ~w", [Else]}),
 			continue_work()
 	end.
 
@@ -76,7 +94,7 @@ continue_work() ->
 %% TODO: Add description of stop/function_arity
 %%
 stop() ->
-	io:format("Stopping.."),
+	io:format("Stopping..."),
 	conn_mgr ! {quit},
 	main_proc ! quit,
 	misultin:stop(),
@@ -123,13 +141,56 @@ dispatch_http('GET', ["favicon.ico"], Req, _Port) ->
 				[{"Content-Type", "text/html"}], 
 				["File favicon /", Path, " not found"]
 			   );
+
+dispatch_http(_Meth='GET', UrlParts, Req, _Port) ->
+	Path = "/" ++ string:join(UrlParts, "/"),
+	?D({"Got path: ~p", [Path]}),
+	case string:str(Path, "..") of
+		0 ->
+			% correct path
+			{ok, Dir} = file:get_cwd(),
+			FilePath = Dir ++ "/www/" ++ Path,
+			% Check the file
+			case filelib:is_file(FilePath) of
+				true ->
+					?D({"Path ~p ok, send file", [FilePath]}),
+					Req:file(FilePath);
+				false ->
+					?D({"File ~p not found or is dir", [FilePath]}),
+					dispatch_http_404(_Meth, UrlParts, Req, _Port)
+			end;
+		_Else ->
+			% incorrect path
+			?D("Path incorrect"),
+			dispatch_http_404(_Meth, UrlParts, Req, _Port)
+%% 			Req:respond(400, [{"Content-Type", "text/html"}], 
+%% 				[
+%% 					"File /", Path, " not found. <br /> \n\r",
+%% 					"Method: " , atom_to_list(_Meth) 
+%% 				])
+	end;
 	
+
 dispatch_http(_Meth, _Path, Req, _Port) ->
+	dispatch_http_404(_Meth, _Path, Req, _Port).
+%% 	Req:respond(404, [{"Content-Type", "text/html"}], 
+%% 		[
+%% 			"File /", string:join(_Path, "/"), " not found. <br /> \n\r",
+%% 			"Method: " , atom_to_list(_Meth) 
+%% 		]).
+
+
+%%
+%% Send error
+%%
+dispatch_http_404(Meth, UrlParts, Req, Port) ->
 	Req:respond(404, [{"Content-Type", "text/html"}], 
 		[
-			"File /", string:join(_Path, "/"), " not found. <br /> \n\r",
-			"Method: " , atom_to_list(_Meth) 
+			"File /", string:join(UrlParts, "/"), " not found. <br /> \n\r",
+			"Method: " , atom_to_list(Meth),
+			"Server: ", ?SERVERNAME, "/", ?VSN, " at port ", Port
 		]).
+	
 
 %%
 %% Index page for chat
@@ -137,8 +198,9 @@ dispatch_http(_Meth, _Path, Req, _Port) ->
 
 handle_http_index(Req, Port) ->	
 	% output
-	io:fwrite("Sending index page...~n"),
-	FileName = "www/index2.html",
+	% io:fwrite("Sending index page...~n"),
+	?D("Send index page"),
+	FileName = "www/chat.html",
 	FileRes = file:read_file(FileName),
 	case FileRes of
 		{ok, Tmpl} ->
@@ -163,7 +225,7 @@ conn_manager(CurrentClients) ->
 		{new, Pid} ->
 			Ref = erlang:monitor(process, Pid),
 			% Ref = 0,
-			io:fwrite("Process ~w added to client manager monitoring with ref ~w~n", [Pid, Ref]),
+			?D({"Process ~w added to client manager monitoring with ref ~w", [Pid, Ref]}),
 			NewClients = CurrentClients ++ [#client{pid=Pid, ref=Ref}],
 			conn_manager(NewClients);
 		{send_list, Pid} ->
@@ -172,22 +234,22 @@ conn_manager(CurrentClients) ->
 			Pid ! ClientsDisp,
 			conn_manager(CurrentClients);
 		{print_list} ->
-			io:fwrite("Curr clients: ~w~n", [CurrentClients]),
+			?D({"Curr clients: ~w", [CurrentClients]}),
 			conn_manager(CurrentClients);
 		{bcast, Msg} ->
 			[Client#client.pid ! {send, Msg} || Client <- CurrentClients],
 			conn_manager(CurrentClients);
 		{quit} ->
-			io:fwrite("Conn Manager quit ~n");
+			?D("Conn Manager quit.");
 		{'DOWN', Ref, process, Pid, Reason} ->
 			% working process goes down
-			io:fwrite("Process ~w (Ref ~w) is down because of ~w~n", [Pid, Ref, Reason]),
+			?D({"Process ~w (Ref ~w) is down because of ~w", [Pid, Ref, Reason]}),
 			erlang:demonitor(Ref),
 			NewClients = lists:filter(fun(X) -> X#client.ref =/= Ref end, CurrentClients),
 			conn_manager(NewClients);
 			% NewClients = [X || X <- CurrentClients, {_, FindRef} = X, FindRef /= Ref] ;
 		Ignore ->
-			io:fwrite("Conn Manager got unknown command: ~w~n", [Ignore]),
+			?D({"Conn Manager got unknown command: ~w", [Ignore]}),
 			conn_manager(CurrentClients)
 	end.
 
@@ -200,13 +262,13 @@ handle_websocket_start(Ws) ->
 handle_websocket(Ws) ->
 	receive
 		{browser, Data} ->
-			io:format("Got Data: ~p~n", [Data]),
+			?D({"Got Data: ~p", [Data]}),
 			Ws:send(["received '", Data, "'"]),
 			conn_mgr ! {bcast, Data},
 			_Z = xopt(Ws, Data),
 			handle_websocket(Ws);
 		{send, Data} ->
-			io:format("Got Data for send: ~p~n", [Data]),
+			?D({"Got Data for send: ~p", [Data]}),
 			Ws:send([Data]),
 			handle_websocket(Ws);			
 		_Ignore ->
