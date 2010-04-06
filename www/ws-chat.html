@@ -1,0 +1,89 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+	"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+	<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.1/jquery.min.js"></script>
+	<!-- script type="text/javascript" src="http://jquerykeyboard.googlecode.com/hg/jquery.keyboard.js" / -->
+	<script type="text/javascript" src="shortcut.js"></script>
+	<script type="text/javascript" src="/files/websocket/swfobject.js"></script>
+	<script type="text/javascript" src="/files/websocket/FABridge.js"></script>
+	<script type="text/javascript" src="/files/websocket/web_socket.js"></script>
+	<style>
+		#main {width: 600px;}
+		#chat {border: solid 1px green; width: 100%; height: 350px; margin-bottom: 0.5em; overflow: auto; }
+		#msgarea  {width: 99%; font-size: 100%;}
+		#sendmsg_div {background: lightyellow; text-align: right; margin-top: 2px;}
+		#sendmsg {margin-left: 3em;}
+		.sys {color: gray; font-style: italic;}
+		#chat li {list-style:none; padding: 0 0 0 0.2em;}
+	</style>
+	<script type="text/javascript">
+		WebSocket.__swfLocation = "/files/websocket/WebSocketMain.swf";
+		function sendmsg(evt) {
+			//evt.preventDefault();
+			txt = $("#msgarea").val();
+			myWS.send(txt);
+			$("#msgarea").val("");
+			//return false;
+		};
+		function submit_form(evt) {
+			evt.preventDefault();
+			sendmsg();
+		};
+	</script>
+	<script>
+		$(document).ready( function() {
+			$('#sendmsg_form').bind('submit', submit_form);
+			//$('#msgarea').keyboard('ctrl+enter', sendmsg);
+			shortcut_options = {'type': 'keydown', 'disable_in_input': false, 'target': document, 'propagate': false}
+			shortcut.add("Ctrl+Enter", sendmsg, shortcut_options);
+			shortcut.add("Meta+Enter", sendmsg, shortcut_options);
+		} );
+	</script>
+	<script>
+		function write(msg, cls) {
+			//var scrl = ( $("#chat").attr("scrollTop") == $("#chat").attr("scrollHeight") );
+			//$("<li />").addClass(cls).text($("#chat").attr("scrollTop") +" " + $("#chat").attr("scrollHeight") ).appendTo("#chat");
+			$("<li />").addClass(cls).text(msg).appendTo('#chat');
+			$("#chat").attr({ scrollTop: $("#chat").attr("scrollHeight") });
+		};
+
+		if (window.WebSocket) {
+			myWS = new WebSocket("ws://192.168.1.70:8008/ws-chat");
+
+			myWS.onopen = function(evt) {
+				write('WebSocket connected', 'sys');
+			};
+
+			myWS.onmessage = function(evt) {
+				write(evt.data);
+				//$("<li />").text(evt.data).appendTo("#chat");
+			}
+
+			myWS.onclose = function(evt) {
+				write("WebSocket disconnected...", "sys");
+			}
+		}
+	</script>
+	<title>WebSockets Chat</title>
+
+</head>
+<body>
+	<h1>Web Sockets Chat</h1>
+	<div id="main">
+	<div id="chat"></div>
+	<div id="msg">
+		<form id="sendmsg_form">
+		<div id="loginarea">Ваше имя: <input type="text" /> &nbsp; <input type="button" id="enter_chat" value="  Войти в чат " /></div>
+		<textarea id="msgarea" cols="70" rows="5">Введите Ваше сообщение и нажмите Ctr+Enter или Command+Enter для отправки...</textarea><br/>
+		<div id="sendmsg_div"><div>&#x2318;&#x23ce; &nbsp;&nbsp; or &nbsp;&nbsp; &#x2303;&#x23ce; <input type="submit" id="sendmsg" value="  Send message " /></div></div>
+		</form>
+	</div>
+	</div>
+
+
+
+</body>
+</html>
