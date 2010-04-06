@@ -221,7 +221,7 @@ conn_manager() ->
 	conn_manager([]).
 
 conn_manager(CurrentClients) ->
-	receive 
+	receive
 		{new, Pid} ->
 			Ref = erlang:monitor(process, Pid),
 			% Ref = 0,
@@ -258,12 +258,19 @@ handle_websocket_start(Ws) ->
 	conn_mgr ! {new, self()},
 	handle_websocket(Ws).
 
+% first auth user
+% handle_websocket_auth(Ws) ->
+% 	?D("Auth new user"),
+% 	receive
+% 		{browser, Data} ->
+% 			Dec = rfc4627:
+
 % callback on received websockets data
 handle_websocket(Ws) ->
 	receive
 		{browser, Data} ->
 			?D({"Got Data: ~p", [Data]}),
-			Ws:send(["received '", Data, "'"]),
+			% Ws:send(["received '", Data, "'"]),
 			conn_mgr ! {bcast, Data},
 			_Z = xopt(Ws, Data),
 			handle_websocket(Ws);
@@ -277,7 +284,7 @@ handle_websocket(Ws) ->
 			Ws:send([Str]),
 			handle_websocket(Ws)
 	after 5000 ->
-		Ws:send("pushing!"),
+		% Ws:send("pushing!"),
 		handle_websocket(Ws)
 	end.
 
@@ -285,7 +292,7 @@ handle_websocket(Ws) ->
 xopt(Ws, Data) ->
 	case Data of
 		"/U" ->
-			Ws:send(["Got cmd /U. Russian text: ",  ?ub("")]);
+			Ws:send(["Got cmd /U. Russian text: ",  "Русский текст"]);
 		"/0" ->
 			Ws:send(["Got cmd /0"]),
 			(2+3) / (2 - 2);
