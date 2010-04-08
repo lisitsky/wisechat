@@ -331,10 +331,15 @@ conn_manager(CurrentState) ->
 clients_send_list(Pid, CurrentClients) ->
 	ClientsDisp = [?ub(io_lib:format("<span style='color:~ts'>~ts</span>", [Client#client.color, Client#client.name]))
 					|| Client <- CurrentClients, Client#client.name /= ""],
+	% ClientsDisp = [ {obj, [{"name", ?ub(C#client.name)}, {"color", ?ub(C#client.color)}]}
+	% 				|| C <- CurrentClients, C#client.name /= "" ],
 	% Anons = lists:foldl(fun(X, Sum) -> )
+	?D({"ClientsDisp is: ~p", [ClientsDisp]}),
 	Anons = length([ Client || Client <- CurrentClients, Client#client.name == ""]),
 	Msg = [{"users", ClientsDisp}, {"anons", Anons}],
+	?D({"Whole clients display is: ~p", [Msg]}),
 	MsgJson = rfc4627:encode({obj, Msg}),
+	?D({"Whole clients json is:  ~s", [MsgJson]}),
 	case Pid of
 		all ->
 			% send to all users
