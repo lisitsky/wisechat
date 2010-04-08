@@ -65,6 +65,10 @@
 			shortcut_options = {'type': 'keydown', 'disable_in_input': false, 'target': document.getElementById("msgarea"), 'propagate': false};
 			shortcut.add("Ctrl+Enter", sendmsg, shortcut_options);
 			shortcut.add("Meta+Enter", sendmsg, shortcut_options);
+			shortcut.add("Enter", send_auth,
+				{'type':'keydown', 'disable_in_input': false, 'target':
+				document.getElementById("user_name"), 'propagate': false
+			});
 		} );
 	</script>
 	<script>
@@ -81,6 +85,7 @@
 				set_users(obj["users"]);
 				num = obj["users"].length;
 				$("#users_count").text(num);
+				$("#anons_count").text(obj["anons"]);
 			};
 			if (obj["msg"]) {
 				// message
@@ -89,7 +94,7 @@
 				write(colored_msg, undefined, undefined);
 
 			};
-			write(msg)
+			// write(msg)
 		};
 
 		function write(msg, cls, color) {
@@ -160,7 +165,8 @@
 	</div>
 	</div>
 
-	<div id="users">Пользователи в чате: &nbsp; <span id="users_count">0</span>
+	<div id="users">Пользователи: &nbsp; <span id="users_count" title="Авторизовавшиеся"> 0 </span> /
+		<span id="anons_count" title="Анонимы"> 0 </span>
 		<div id="users_list">
 		</div>
 	</div>
