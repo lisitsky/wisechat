@@ -17,11 +17,13 @@
 
 -define(ub(X), unicode:characters_to_binary(X)).
 
+-define(ul(X), unicode:characters_to_list(X)).
+
 %% for debug
 %% Write debug:
 -define(D(Msg), util:write_debug(Msg, ?LINE, ?FILE)).
 % -define(D2(Fmt, Data), util:write_debug(Fmt, ?LINE, ?FILE)).
-		
+
 %%
 %% Records
 %%
@@ -29,7 +31,15 @@
 	{
 		pid,	%  Process handling websocket connection
 		ref,	%  Ref to process for monitoring
-		name=""	%  Client name
+		name="",	%  Client name
+		color=""  % Client color
+	}).
+
+-record(session,
+	{
+		name="",	% Client name in session
+		auth=false,	% Auth state     | true
+		color=""  	% Client color
 	}).
 
 %%
@@ -41,7 +51,7 @@
 %% write_debug(Msg) ->
 %% 	Now = erlang:now(),
 %% 	{{Year, Month, Day}, {H, M, S}} = calendar:now_to_local_time(Now),
-%% 	io:format("[~p-~p-~p ~p:~p:~p] ~p in ~p at ~p~n", 
+%% 	io:format("[~p-~p-~p ~p:~p:~p] ~p in ~p at ~p~n",
 %% 				[Year, Month, Day, H, M, S, Msg, ?FILE, ?LINE]).
 
 %%
@@ -56,6 +66,7 @@
 %% TODO: Add description of stop/function_arity
 %%
 start(Port) ->
+	% random_p:start(),
 	Conn_Manager = spawn(fun() -> conn_manager() end),
 	% io:fwrite("Conn Manager Pid: ~w~n", [Conn_Manager]),
 	% ?D1(io_lib:format("Conn Manager Pid: ~p~n", [Conn_Manager])),
@@ -63,8 +74,8 @@ start(Port) ->
 	% ?D("Conn Manager Pid"),
 	register(conn_mgr, Conn_Manager),
 	misultin:start_link([
-		{port, Port}, 
-		{loop, fun(Req) -> handle_http(Req, Port) end}, 
+		{port, Port},
+		{loop, fun(Req) -> handle_http(Req, Port) end},
 		{ws_loop, fun(Ws) -> handle_websocket_start(Ws) end}
 	]),
 	Conn_Manager.
@@ -76,6 +87,7 @@ start_work([Arg]) ->
 	Port = list_to_integer(atom_to_list(Arg)),
 	%io:format("Start_work started on port ~w ~n", [Port]),
 	register(main_proc, self()),
+	% random:seed(),
 	start(Port),
 	continue_work().
 
@@ -129,16 +141,16 @@ handle_http(Req, Port) ->
 	Path = Req:resource([lowercase, urldecode]),
 	dispatch_http(Meth, Path, Req, Port).
 
-%% 
-%% Dispatch HTTP request 
+%%
+%% Dispatch HTTP request
 %%
 dispatch_http('GET', [], Req, Port) ->
 	handle_http_index(Req, Port);
 
 dispatch_http('GET', ["favicon.ico"], Req, _Port) ->
 	Path = ["favicon.ico"],
-	Req:respond(404, 
-				[{"Content-Type", "text/html"}], 
+	Req:respond(404,
+				[{"Content-Type", "text/html"}],
 				["File favicon /", Path, " not found"]
 			   );
 
@@ -163,20 +175,20 @@ dispatch_http(_Meth='GET', UrlParts, Req, _Port) ->
 			% incorrect path
 			?D("Path incorrect"),
 			dispatch_http_404(_Meth, UrlParts, Req, _Port)
-%% 			Req:respond(400, [{"Content-Type", "text/html"}], 
+%% 			Req:respond(400, [{"Content-Type", "text/html"}],
 %% 				[
 %% 					"File /", Path, " not found. <br /> \n\r",
-%% 					"Method: " , atom_to_list(_Meth) 
+%% 					"Method: " , atom_to_list(_Meth)
 %% 				])
 	end;
-	
+
 
 dispatch_http(_Meth, _Path, Req, _Port) ->
 	dispatch_http_404(_Meth, _Path, Req, _Port).
-%% 	Req:respond(404, [{"Content-Type", "text/html"}], 
+%% 	Req:respond(404, [{"Content-Type", "text/html"}],
 %% 		[
 %% 			"File /", string:join(_Path, "/"), " not found. <br /> \n\r",
-%% 			"Method: " , atom_to_list(_Meth) 
+%% 			"Method: " , atom_to_list(_Meth)
 %% 		]).
 
 
@@ -184,19 +196,19 @@ dispatch_http(_Meth, _Path, Req, _Port) ->
 %% Send error
 %%
 dispatch_http_404(Meth, UrlParts, Req, Port) ->
-	Req:respond(404, [{"Content-Type", "text/html"}], 
+	Req:respond(404, [{"Content-Type", "text/html"}],
 		[
 			"File /", string:join(UrlParts, "/"), " not found. <br /> \n\r",
 			"Method: " , atom_to_list(Meth),
 			"Server: ", ?SERVERNAME, "/", ?VSN, " at port ", Port
 		]).
-	
+
 
 %%
 %% Index page for chat
 %%
 
-handle_http_index(Req, Port) ->	
+handle_http_index(Req, Port) ->
 	% output
 	% io:fwrite("Sending index page...~n"),
 	?D("Send index page"),
@@ -212,7 +224,7 @@ handle_http_index(Req, Port) ->
 	end,
 	% Meth = Req:get(method),
 	Req:ok([{"Content-Type", "text/html"}], [Page]).
-	
+
 %%
 %% Connection manager. Manages connections and clients list.
 %%
@@ -221,22 +233,44 @@ conn_manager() ->
 	conn_manager([]).
 
 conn_manager(CurrentClients) ->
+	?D({"Conn manager loop. Clients: ~p", [CurrentClients]}),
 	receive
 		{new, Pid} ->
 			Ref = erlang:monitor(process, Pid),
 			% Ref = 0,
 			?D({"Process ~w added to client manager monitoring with ref ~w", [Pid, Ref]}),
 			NewClients = CurrentClients ++ [#client{pid=Pid, ref=Ref}],
+			?D({"New Clients: ~p", [NewClients]}),
+			conn_manager(NewClients);
+		{set_opts, Pid, Session} ->
+			% Set client options from session data
+			?D({"Set clients options '~p' for Pid ~p", [Session, Pid]}),
+			Res  = lists:keytake(Pid, 2, CurrentClients),
+			case Res of
+				{value, OldClient, RestClients} ->
+					% client is found
+					?D({"Client: ~p. Clients list after deletion: ~p", [OldClient, RestClients]}),
+					% {value, OldClient, RestClients}
+					NewClient = OldClient#client{name=Session#session.name, color=Session#session.color},
+					NewClients = lists:keymerge(3, [NewClient], RestClients);
+				false ->
+					% not found
+					?D({"Cannot find client! ", []}),
+					NewClients = CurrentClients
+			end,
 			conn_manager(NewClients);
 		{send_list, Pid} ->
 			% Send clients list to user
-			ClientsDisp = [Client#client.name || Client <- CurrentClients],
-			Pid ! ClientsDisp,
+			ClientsDisp = [?ub(Client#client.name) || Client <- CurrentClients],
+			Msg = [{"users", ClientsDisp}],
+			MsgJson = rfc4627:encode({obj, Msg}),
+			Pid ! {send, MsgJson},
 			conn_manager(CurrentClients);
 		{print_list} ->
 			?D({"Curr clients: ~w", [CurrentClients]}),
 			conn_manager(CurrentClients);
 		{bcast, Msg} ->
+			?D({"Message to broadcast: ~p", [Msg]}),
 			[Client#client.pid ! {send, Msg} || Client <- CurrentClients],
 			conn_manager(CurrentClients);
 		{quit} ->
@@ -253,46 +287,134 @@ conn_manager(CurrentClients) ->
 			conn_manager(CurrentClients)
 	end.
 
+% Auth function
+check_credentials(Auth) ->
+	?D({"Auth data is ~p", [Auth]}),
+	NameBin = proplists:get_value("name", Auth),
+	?D({"NameBin is ~p", [NameBin]}),
+	Name = ?ul(NameBin),
+	?D({"User name is ~p", [Name]}),
+	{ok, Name}.
+
 % first call for websocket callback
 handle_websocket_start(Ws) ->
+	{A1, A2, A3} = now(),
+	random:seed(A1, A2, A3),
+	?D({"Ws process started with Pid ~p", [self()]}),
 	conn_mgr ! {new, self()},
-	handle_websocket(Ws).
+	Session = #session{name="", auth=false},
+	handle_websocket(Ws, Session).
 
 % first auth user
-% handle_websocket_auth(Ws) ->
+% handle_websocket_auth(Ws, Session) ->
 % 	?D("Auth new user"),
 % 	receive
 % 		{browser, Data} ->
-% 			Dec = rfc4627:
+% 			?D({"Auth got data: ~p", [Data]}),
+% 			% BinData = ?ub(Data),
+% 			% ?D({"Bin auth data: ~p", [BinData]}),
+% 			{ok, {obj, Dec}, _Rest} = rfc4627:decode(Data),
+% 			?D({"Decoded auth data: ~p", [Dec]}),
+% 			case check_credentials(Dec) of
+% 				{ok, Name} ->
+% 					% Auth ok
+% 					?D("Auth ok"),
+% 					Msg = [{"auth_ok", 1}],
+% 					Ws:send(rfc4627:encode({obj, Msg})),
+% 					% Add to the list
+% 					conn_mgr ! {new, self(), Name},
+% 					% Get users list
+% 					conn_mgr ! {send_list, self()},
+% 					% продолжаем в основном режиме
+% 					handle_websocket(Ws);
+% 				_Else ->
+% 					% Auth error
+% 					?D("Auth error"),
+% 					handle_websocket_auth(Ws)
+% 			end;
+% 		_Ignore ->
+% 			?D({"Handle auth got unknown message: ~p", [_Ignore]})
+% 	end.
 
 % callback on received websockets data
-handle_websocket(Ws) ->
+handle_websocket(Ws, Session) ->
 	receive
 		{browser, Data} ->
 			?D({"Got Data: ~p", [Data]}),
 			% Ws:send(["received '", Data, "'"]),
-			conn_mgr ! {bcast, Data},
-			_Z = xopt(Ws, Data),
-			handle_websocket(Ws);
+			{ok, {obj, Dec}, _Rest} = rfc4627:decode(Data),
+			?D({"Decoded data: ~p", [Dec]}),
+			Msg = proplists:get_value("msg", Dec),
+			?D({"Msg is ~p", [Msg]}),
+			case Msg of
+				undefined ->
+					% это не сообщение
+					Cmd = proplists:get_value("cmd", Dec),
+					?D({"Cmd is ~p", [Cmd]}),
+					case Cmd of
+						<<"auth">> ->
+							% Do auth
+							{ok, Name} = check_credentials(Dec),
+							R = random:uniform(127),
+							G = random:uniform(127),
+							B = 250 - R - G,
+							Color = io_lib:format("rgb(~w,~w,~w)", [R, G, B]),
+							NewSession = Session#session{name=Name, auth=true, color=Color},
+							conn_mgr ! {set_opts, self(), NewSession},
+							Reply = [{"auth_ok", 1}],
+							Ws:send(rfc4627:encode({obj, Reply})),
+							?D({"New Session is ~p", [NewSession]}),
+							handle_websocket(Ws, NewSession);
+						<<"send_list">> ->
+							% Get users list
+							conn_mgr ! {send_list, self()},
+							handle_websocket(Ws, Session);
+						_Else ->
+							% Unknown command
+							?D({"Got unknown command: ~p", [Cmd]}),
+							handle_websocket(Ws, Session)
+					end;
+				_ ->
+					% сообщение - проверить права пользователя
+					Authed = Session#session.auth,
+					?D({"Auth state ~p", [Authed]}),
+					case Authed of
+						true ->
+							% Client authentificated
+							Reply = [{"msg", ?ub(Msg)}, {"name", ?ub(Session#session.name)},
+									{"color", ?ub(Session#session.color)}],
+							Json = rfc4627:encode({obj, Reply}),
+							?D({"Json to send: ~p", [Json]}),
+							conn_mgr ! {bcast, Json};
+						false ->
+							% unauthentificated
+							?D({"Session ~p is not authentificated", [Session]}),
+							?D("Client is not authentificated - message ignored"),
+							Ws:send(["Unathentificated"])
+					end,
+					handle_websocket(Ws, Session)
+			end;
+			% _Z = xopt(Ws, Msg),
+			% handle_websocket(Ws, Session);
 		{send, Data} ->
 			?D({"Got Data for send: ~p", [Data]}),
 			Ws:send([Data]),
-			handle_websocket(Ws);			
+			handle_websocket(Ws, Session);
 		_Ignore ->
-			Str = io_lib:format("Got msg _Ignore: ~p~n", [_Ignore]), 
+			Str = io_lib:format("Got msg _Ignore: ~p~n", [_Ignore]),
 			% io:write(Str),
 			Ws:send([Str]),
-			handle_websocket(Ws)
+			handle_websocket(Ws, Session)
 	after 5000 ->
 		% Ws:send("pushing!"),
-		handle_websocket(Ws)
+		handle_websocket(Ws, Session)
 	end.
 
 % Xtra Options for incoming data
 xopt(Ws, Data) ->
 	case Data of
 		"/U" ->
-			Ws:send(["Got cmd /U. Russian text: ",  "Русский текст"]);
+			Ws:send(["Got cmd /U. Russian text: ",  "Русский текст", ?ub("Еще по-русски.")]);
 		"/0" ->
 			Ws:send(["Got cmd /0"]),
 			(2+3) / (2 - 2);
@@ -310,8 +432,7 @@ xopt(Ws, Data, false) ->
 			Ws:send(["Got cmd /U. Russian text: ",  unicode:characters_to_list("")]);
 		"/0" ->
 			Ws:send(["Got cmd /0"]),
-			(2+3) / 2 
+			(2+3) / 2
 	end,
 	ok.
 
-	
