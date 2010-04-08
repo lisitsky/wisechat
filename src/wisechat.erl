@@ -425,9 +425,11 @@ handle_websocket(Ws, Session) ->
 			% Ws:send(["received '", Data, "'"]),
 			{ok, {obj, Dec}, _Rest} = rfc4627:decode(Data),
 			?D({"Decoded data: ~p", [Dec]}),
-			Msg = proplists:get_value("msg", Dec),
-			?D({"Msg is ~p", [Msg]}),
-			case Msg of
+			SrcMsg = proplists:get_value("msg", Dec),
+			?D({"SrcMsg is ~p", [SrcMsg]}),
+			% Msg = util:strip_tags(SrcMsg),
+			% ?D({"Msg is ~p", [Msg]}),
+			case SrcMsg of
 				undefined ->
 					% это не сообщение
 					Cmd = proplists:get_value("cmd", Dec),
@@ -436,11 +438,12 @@ handle_websocket(Ws, Session) ->
 						<<"auth">> ->
 							% Do auth
 							{ok, Name} = check_credentials(Dec),
+							StrippedName = util:strip_tags(Name),
 							R = random:uniform(127),
 							G = random:uniform(127),
 							B = 250 - R - G,
 							Color = io_lib:format("rgb(~w,~w,~w)", [R, G, B]),
-							NewSession = Session#session{name=Name, auth=true, color=Color},
+							NewSession = Session#session{name=StrippedName, auth=true, color=Color},
 							conn_mgr ! {set_opts, self(), NewSession},
 							Reply = [{"auth_ok", 1}],
 							Ws:send(rfc4627:encode({obj, Reply})),
@@ -466,7 +469,8 @@ handle_websocket(Ws, Session) ->
 					case Authed of
 						true ->
 							% Client authentificated
-							Reply = [{"msg", ?ub(Msg)}, {"name", ?ub(Session#session.name)},
+							StrippedMsg = util:strip_tags(?ul(SrcMsg)),
+							Reply = [{"msg", ?ub(StrippedMsg)}, {"name", ?ub(Session#session.name)},
 									{"color", ?ub(Session#session.color)}],
 							Json = rfc4627:encode({obj, Reply}),
 							?D({"Json to send: ~p", [Json]}),
