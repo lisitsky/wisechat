@@ -243,6 +243,7 @@ conn_manager(CurrentClients) ->
 			NewClient = #client{pid=Pid, ref=Ref},
 			NewClients = lists:keymerge(4, [NewClient], CurrentClients),
 			?D({"New Clients: ~p", [NewClients]}),
+			clients_send_list(Pid, NewClients),
 			conn_manager(NewClients);
 		{set_opts, Pid, Session} ->
 			% Set client options from session data
@@ -260,13 +261,16 @@ conn_manager(CurrentClients) ->
 					?D({"Cannot find client! ", []}),
 					NewClients = CurrentClients
 			end,
+			clients_send_list(all, NewClients),
 			conn_manager(NewClients);
 		{send_list, Pid} ->
+			?D("Send clients list to user"),
+			clients_send_list(Pid, CurrentClients),
 			% Send clients list to user
-			ClientsDisp = [?ub(Client#client.name) || Client <- CurrentClients],
-			Msg = [{"users", ClientsDisp}],
-			MsgJson = rfc4627:encode({obj, Msg}),
-			Pid ! {send, MsgJson},
+			% ClientsDisp = [?ub(Client#client.name) || Client <- CurrentClients],
+			% Msg = [{"users", ClientsDisp}],
+			% MsgJson = rfc4627:encode({obj, Msg}),
+			% Pid ! {send, MsgJson},
 			conn_manager(CurrentClients);
 		{print_list} ->
 			?D({"Curr clients: ~w", [CurrentClients]}),
@@ -282,12 +286,37 @@ conn_manager(CurrentClients) ->
 			?D({"Process ~w (Ref ~w) is down because of ~w", [Pid, Ref, Reason]}),
 			erlang:demonitor(Ref),
 			NewClients = lists:filter(fun(X) -> X#client.ref =/= Ref end, CurrentClients),
+			clients_send_list(all, NewClients),
 			conn_manager(NewClients);
 			% NewClients = [X || X <- CurrentClients, {_, FindRef} = X, FindRef /= Ref] ;
 		Ignore ->
 			?D({"Conn Manager got unknown command: ~w", [Ignore]}),
 			conn_manager(CurrentClients)
 	end.
+
+
+% Send all clients to all users
+% clients_send_list(Pids, CurrentClients) when is_list(Pids) ->
+% 	?D({"Sendign all clients list to all clients: ~p ", [CurrentClients]})
+% 	[client_send_list(Client#client.pid, CurrentClients) || Client <- CurrentClients];
+
+% Send all clients list to the requested Pid
+clients_send_list(Pid, CurrentClients) ->
+	ClientsDisp = [?ub(io_lib:format("<span style='color:~ts'>~ts</span>", [Client#client.color, Client#client.name]))
+					|| Client <- CurrentClients, Client#client.name /= ""],
+	Msg = [{"users", ClientsDisp}],
+	MsgJson = rfc4627:encode({obj, Msg}),
+	case Pid of
+		all ->
+			% send to all users
+			[Client#client.pid ! {send, MsgJson} || Client <- CurrentClients];
+		XPid when is_pid(XPid) ->
+			XPid ! {send, MsgJson};
+		_ ->
+			% error
+			?D("Don't know to whom send client list")
+	end.
+
 
 % Auth function
 check_credentials(Auth) ->
