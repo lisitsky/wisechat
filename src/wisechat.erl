@@ -243,7 +243,7 @@ conn_manager(CurrentClients) ->
 			NewClient = #client{pid=Pid, ref=Ref},
 			NewClients = lists:keymerge(4, [NewClient], CurrentClients),
 			?D({"New Clients: ~p", [NewClients]}),
-			clients_send_list(Pid, NewClients),
+			clients_send_list(all, NewClients),
 			conn_manager(NewClients);
 		{set_opts, Pid, Session} ->
 			% Set client options from session data
@@ -304,7 +304,9 @@ conn_manager(CurrentClients) ->
 clients_send_list(Pid, CurrentClients) ->
 	ClientsDisp = [?ub(io_lib:format("<span style='color:~ts'>~ts</span>", [Client#client.color, Client#client.name]))
 					|| Client <- CurrentClients, Client#client.name /= ""],
-	Msg = [{"users", ClientsDisp}],
+	% Anons = lists:foldl(fun(X, Sum) -> )
+	Anons = length([ Client || Client <- CurrentClients, Client#client.name == ""]),
+	Msg = [{"users", ClientsDisp}, {"anons", Anons}],
 	MsgJson = rfc4627:encode({obj, Msg}),
 	case Pid of
 		all ->
