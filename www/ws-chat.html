@@ -31,6 +31,8 @@
 			position: absolute; top:1em; bottom:0; left:0; right:0;
 		}
 		#users #users_list li {list-style:none;  padding: 0 0 0 0.2em;}
+		#logdiv {display: none; border: solid 1px red; float: right; }
+		#logdiv #log { width: 100%; height: 100%; margin-bottom: 0.5em; overflow: auto; }
 	</style>
 	<script type="text/javascript">
 		WebSocket.__swfLocation = "/static/websocket/WebSocketMain.swf";
@@ -77,8 +79,13 @@
 	<script>
 		// Fired on message arrival
 		function msg_got(msg) {
+			// $("<li>").text(msg).appendTo("#log");  // debug
+			//write(msg);
+			//write("Parsing...");
 			// first parse it
 			obj = $.parseJSON(msg);
+			//write( $.toJSON(obj) );
+			//write("Obj " + obj.anons);
 			if (obj['auth_ok']) {
 				// successfull auth
 				$("#logindiv").hide();
@@ -94,10 +101,11 @@
 				// message
 				color = obj["color"];
 				colored_msg = "<span style='color:" + color + "''>" + obj["name"] + ":</span>&nbsp;" + obj["msg"];
+				// $('<span>').css('color', color).text(obj["name"]).append(obj["name"])
 				write(colored_msg, undefined, undefined);
 
 			};
-			// write(msg)
+
 		};
 
 		function write(msg, cls, color) {
@@ -175,6 +183,8 @@
 		<div id="users_list">
 		</div>
 	</div>
+
+	<div id="logdiv">Лог: <br/><div id="log"></div></div>
 
 
 
