@@ -252,7 +252,8 @@ conn_manager(CurrentState) ->
 			?D({"Process ~w added to client manager monitoring with ref ~w", [Pid, Ref]}),
 			% NewClients = CurrentClients ++ [#client{pid=Pid, ref=Ref}],
 			NewClient = #client{pid=Pid, ref=Ref},
-			NewClients = lists:keymerge(4, [NewClient], CurrentState#cm_state.clients),
+			% NewClients = lists:keymerge(4, [NewClient], CurrentState#cm_state.clients),
+			NewClients = [NewClient | CurrentClients],
 			?D({"New Clients: ~p", [NewClients]}),
 			clients_send_list(all, NewClients),
 			NewState = CurrentState#cm_state{clients=NewClients},
@@ -267,7 +268,8 @@ conn_manager(CurrentState) ->
 					?D({"Client: ~p. Clients list after deletion: ~p", [OldClient, RestClients]}),
 					% {value, OldClient, RestClients}
 					NewClient = OldClient#client{name=Session#session.name, color=Session#session.color},
-					NewClients = lists:keymerge(4, [NewClient], RestClients),
+					% NewClients = lists:keymerge(4, [NewClient], RestClients),    %%%   TROUBLE
+					NewClients = [NewClient | RestClients],
 					NewState = CurrentState#cm_state{clients=NewClients};
 				false ->
 					% not found
