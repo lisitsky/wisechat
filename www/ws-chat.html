@@ -122,7 +122,9 @@
 
 			myWS.onopen = function(evt) {
 				write('WebSocket connected', 'sys');
-				//myWS.send("/L");
+				// get archive
+				cmd = {"cmd":"archive"};
+				myWS.send($.toJSON(cmd));
 			};
 
 			myWS.onmessage = function(evt) {

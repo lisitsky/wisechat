@@ -19,6 +19,8 @@
 
 -define(ul(X), unicode:characters_to_list(X)).
 
+-define(ARCHIVE_LAST, 512).
+
 %% for debug
 %% Write debug:
 -define(D(Msg), util:write_debug(Msg, ?LINE, ?FILE)).
@@ -40,6 +42,13 @@
 		name="",	% Client name in session
 		auth=false,	% Auth state     | true
 		color=""  	% Client color
+	}).
+
+% client manager state
+-record(cm_state,
+	{
+		clients = [],	% Clients list
+		msg_buf = [] 	% messages buffer for later clients
 	}).
 
 %%
@@ -230,10 +239,12 @@ handle_http_index(Req, Port) ->
 %%
 conn_manager() ->
 	process_flag(trap_exit, true),
-	conn_manager([]).
+	CM_State = #cm_state{},
+	conn_manager(CM_State).
 
-conn_manager(CurrentClients) ->
-	?D({"Conn manager loop. Clients: ~p", [CurrentClients]}),
+conn_manager(CurrentState) ->
+	?D({"Conn manager loop. State: ~p", [CurrentState]}),
+	CurrentClients = CurrentState#cm_state.clients,
 	receive
 		{new, Pid} ->
 			Ref = erlang:monitor(process, Pid),
@@ -241,10 +252,11 @@ conn_manager(CurrentClients) ->
 			?D({"Process ~w added to client manager monitoring with ref ~w", [Pid, Ref]}),
 			% NewClients = CurrentClients ++ [#client{pid=Pid, ref=Ref}],
 			NewClient = #client{pid=Pid, ref=Ref},
-			NewClients = lists:keymerge(4, [NewClient], CurrentClients),
+			NewClients = lists:keymerge(4, [NewClient], CurrentState#cm_state.clients),
 			?D({"New Clients: ~p", [NewClients]}),
 			clients_send_list(all, NewClients),
-			conn_manager(NewClients);
+			NewState = CurrentState#cm_state{clients=NewClients},
+			conn_manager(NewState);
 		{set_opts, Pid, Session} ->
 			% Set client options from session data
 			?D({"Set clients options '~p' for Pid ~p", [Session, Pid]}),
@@ -255,14 +267,17 @@ conn_manager(CurrentClients) ->
 					?D({"Client: ~p. Clients list after deletion: ~p", [OldClient, RestClients]}),
 					% {value, OldClient, RestClients}
 					NewClient = OldClient#client{name=Session#session.name, color=Session#session.color},
-					NewClients = lists:keymerge(4, [NewClient], RestClients);
+					NewClients = lists:keymerge(4, [NewClient], RestClients),
+					NewState = CurrentState#cm_state{clients=NewClients};
 				false ->
 					% not found
 					?D({"Cannot find client! ", []}),
-					NewClients = CurrentClients
+					NewClients = CurrentClients,
+					NewState = CurrentState  % #cm_state{clients=Clients},
+					% NewClients = CurrentClients
 			end,
 			clients_send_list(all, NewClients),
-			conn_manager(NewClients);
+			conn_manager(NewState);
 		{send_list, Pid} ->
 			?D("Send clients list to user"),
 			clients_send_list(Pid, CurrentClients),
@@ -271,14 +286,23 @@ conn_manager(CurrentClients) ->
 			% Msg = [{"users", ClientsDisp}],
 			% MsgJson = rfc4627:encode({obj, Msg}),
 			% Pid ! {send, MsgJson},
-			conn_manager(CurrentClients);
+			conn_manager(CurrentState);
 		{print_list} ->
 			?D({"Curr clients: ~w", [CurrentClients]}),
-			conn_manager(CurrentClients);
+			conn_manager(CurrentState);
 		{bcast, Msg} ->
 			?D({"Message to broadcast: ~p", [Msg]}),
+			Messages = CurrentState#cm_state.msg_buf,
+			NewMessages = add_to_history(Messages, Msg),
+			?D({"Full messages archive is: ~p", [NewMessages]}),
 			[Client#client.pid ! {send, Msg} || Client <- CurrentClients],
-			conn_manager(CurrentClients);
+			NewState = CurrentState#cm_state{msg_buf=NewMessages},
+			conn_manager(NewState);
+		{archive, Pid} ->
+			?D({"Sending archive to Pid: ~p", [Pid]}),
+			Messages = CurrentState#cm_state.msg_buf,
+			[Pid ! {send, Msg} || Msg <- Messages],
+			conn_manager(CurrentState);
 		{quit} ->
 			?D("Conn Manager quit.");
 		{'DOWN', Ref, process, Pid, Reason} ->
@@ -287,11 +311,12 @@ conn_manager(CurrentClients) ->
 			erlang:demonitor(Ref),
 			NewClients = lists:filter(fun(X) -> X#client.ref =/= Ref end, CurrentClients),
 			clients_send_list(all, NewClients),
-			conn_manager(NewClients);
+			NewState = CurrentState#cm_state{clients=NewClients},
+			conn_manager(NewState);
 			% NewClients = [X || X <- CurrentClients, {_, FindRef} = X, FindRef /= Ref] ;
 		Ignore ->
 			?D({"Conn Manager got unknown command: ~w", [Ignore]}),
-			conn_manager(CurrentClients)
+			conn_manager(CurrentState)
 	end.
 
 
@@ -319,6 +344,22 @@ clients_send_list(Pid, CurrentClients) ->
 			?D("Don't know to whom send client list")
 	end.
 
+
+% Append message to list and trim it at 1000
+add_to_history(List, Message) ->
+	NewList = List ++ [Message],
+	?D({"New history list is: ~p", [NewList]}),
+	Len = length(NewList),
+	?D({"New history list length: ~p", [Len]}),
+	Num = Len - ?ARCHIVE_LAST,
+	TakeNum = case Num of
+				_ when Num > 0 ->
+					Num;
+				_ ->
+					0 % ?ARCHIVE_LAST
+			end,
+	?D({"Nthtail from: ~p", [TakeNum]}),
+	lists:nthtail(TakeNum, NewList).
 
 % Auth function
 check_credentials(Auth) ->
@@ -401,6 +442,10 @@ handle_websocket(Ws, Session) ->
 						<<"send_list">> ->
 							% Get users list
 							conn_mgr ! {send_list, self()},
+							handle_websocket(Ws, Session);
+						<<"archive">> ->
+							?D({"Send archive to user", []}),
+							conn_mgr ! {archive, self()},
 							handle_websocket(Ws, Session);
 						_Else ->
 							% Unknown command
