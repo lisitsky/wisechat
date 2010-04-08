@@ -24,10 +24,13 @@
 		.sys {color: gray; font-style: italic;}
 		#chat li {list-style:none; padding: 0 0 0 0.2em;}
 		#error {padding: 1em; background-color: pink; display: none;}
-		#users {width: 200px; float: left; border: solid 1px grey; margin-left: 1em; height: 350px; position: relative;}
+		#users {width: 200px; float: left; border: solid 1px grey; margin-left: 1em; height: 350px;
+				position: relative;  padding: 0 0 0 0.2em;
+		}
 		#users #users_list {border: solid 0px yellow; overflow: auto; height: auto;
 			position: absolute; top:1em; bottom:0; left:0; right:0;
 		}
+		#users #users_list li {list-style:none;  padding: 0 0 0 0.2em;}
 	</style>
 	<script type="text/javascript">
 		WebSocket.__swfLocation = "/static/websocket/WebSocketMain.swf";
