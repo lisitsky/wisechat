@@ -10,7 +10,7 @@
 %%
 %% Exported Functions
 %%
--export([write_debug/3, strip_tags/1]).
+-export([write_debug/3, strip_tags/1, escape_char/1]).
 
 %%
 %% API Functions
@@ -25,7 +25,7 @@ write_debug(Tuple, Line, File) when is_tuple(Tuple) ->
 write_debug(Msg, Line, File)->
 	Now = erlang:now(),
 	{{Year, Month, Day}, {H, M, S}} = calendar:now_to_local_time(Now),
-	io:format("[~4..0b-~2..0b-~2..0b ~2..0b:~2..0b:~2..0b] ~s. File ~p at line ~p~n", 
+	io:format("[~4..0b-~2..0b-~2..0b ~2..0b:~2..0b:~2..0b] ~s. File ~p at line ~p~n",
 				[Year, Month, Day, H, M, S, Msg, File, Line]).
 
 
@@ -35,6 +35,17 @@ write_debug(Msg, Line, File)->
 %%
 
 % Delete < and > symbols from input
-strip_tags(S) ->
-	lists:filter(fun (X) -> X /= $< andalso X /= $> end, S).
+% strip_tags(S) ->
+% 	lists:filter(fun (X) -> X /= $< andalso X /= $> end, S).
 
+strip_tags(S) ->
+	lists:map(fun escape_char/1, S).
+
+
+escape_char(C) ->
+	case C of
+		$< -> "&lt;";
+		$> -> "&gt;";
+		$& -> "&amp;";
+		_  -> C
+	end.
