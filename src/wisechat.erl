@@ -239,7 +239,9 @@ conn_manager(CurrentClients) ->
 			Ref = erlang:monitor(process, Pid),
 			% Ref = 0,
 			?D({"Process ~w added to client manager monitoring with ref ~w", [Pid, Ref]}),
-			NewClients = CurrentClients ++ [#client{pid=Pid, ref=Ref}],
+			% NewClients = CurrentClients ++ [#client{pid=Pid, ref=Ref}],
+			NewClient = #client{pid=Pid, ref=Ref},
+			NewClients = lists:keymerge(4, [NewClient], CurrentClients),
 			?D({"New Clients: ~p", [NewClients]}),
 			conn_manager(NewClients);
 		{set_opts, Pid, Session} ->
@@ -252,7 +254,7 @@ conn_manager(CurrentClients) ->
 					?D({"Client: ~p. Clients list after deletion: ~p", [OldClient, RestClients]}),
 					% {value, OldClient, RestClients}
 					NewClient = OldClient#client{name=Session#session.name, color=Session#session.color},
-					NewClients = lists:keymerge(3, [NewClient], RestClients);
+					NewClients = lists:keymerge(4, [NewClient], RestClients);
 				false ->
 					% not found
 					?D({"Cannot find client! ", []}),
