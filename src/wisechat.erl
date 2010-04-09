@@ -221,11 +221,12 @@ handle_http_index(Req, Port) ->
 	% output
 	% io:fwrite("Sending index page...~n"),
 	?D("Send index page"),
-	FileName = "www/chat.html",
+	FileName = "www/index.html",
 	FileRes = file:read_file(FileName),
 	case FileRes of
 		{ok, Tmpl} ->
-			Page = io_lib:format(Tmpl, [Port]);
+			% Page = io_lib:format(Tmpl, [Port]);
+			Page = Tmpl;
 		{error, Reason} ->
 			Page = io_lib:format("<html><body><h2>File <i>~s</i> not found</h2></body></html>",
 								 [FileName]
