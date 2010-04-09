@@ -34,6 +34,7 @@
 		#users #users_list li {list-style:none;  padding: 0 0 0 0.2em;}
 		#logdiv {display: none; border: solid 1px red; float: right; }
 		#logdiv #log { width: 100%; height: 100%; margin-bottom: 0.5em; overflow: auto; }
+		abbr {text-decoration: none; border-bottom: dotted 1px black; padding: 0 0.2em; margin: 0 0.2em;}
 	</style>
 	<script type="text/javascript">
 		WebSocket.__swfLocation = "/static/websocket/WebSocketMain.swf";
@@ -180,8 +181,8 @@
 	</div>
 	</div>
 
-	<div id="users">Пользователи: &nbsp; <span id="users_count" title="Авторизовавшиеся"> 0 </span> /
-		<span id="anons_count" title="Анонимы"> 0 </span>
+	<div id="users">Пользователи: &nbsp; <abbr id="users_count" title="Авторизовавшиеся">0</abbr> /
+		<abbr id="anons_count" title="Анонимы">0</abbr>
 		<div id="users_list">
 		</div>
 	</div>
