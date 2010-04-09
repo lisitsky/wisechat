@@ -13,6 +13,8 @@
 	<script type="text/javascript" src="/static/websocket/FABridge.js"></script>
 	<script type="text/javascript" src="/static/websocket/web_socket.js"></script>
 	<style>
+		body, input {font-size: 120%;}
+		h1 {font-size: 16pt;}
 		#main {width: 600px; border: solid 0px red; float: left;}
 		#chat {border: solid 1px grey; width: 100%; height: 350px; margin-bottom: 0.5em; overflow: auto; }
 		#logindiv {padding: 1em 0em;}
@@ -25,7 +27,7 @@
 		.sys {color: gray; font-style: italic;}
 		#chat li {list-style:none; padding: 0 0 0 0.2em;}
 		#error {padding: 1em; background-color: pink; display: none;}
-		#users {width: 200px; float: left; border: solid 1px grey; margin-left: 1em; height: 350px;
+		#users {width: 250px; float: left; border: solid 1px grey; margin-left: 1em; height: 350px;
 				position: relative;  padding: 0 0 0 0.2em;
 		}
 		#users #users_list {border: solid 0px yellow; overflow: auto; height: auto;
@@ -150,7 +152,7 @@
 </head>
 
 <body>
-	<!-- <h1>Web Sockets Chat</h1> -->
+	<h1>Web Sockets Chat</h1>
 	<div id="main">
 	<div id="chat"></div>
 	<div id="msg">
@@ -165,7 +167,7 @@
 
 		<div id="messagediv">
 			<form id="sendmsg_form">
-				<div class="hdr">Введите Ваше сообщение и нажмите Ctr+Enter или Command+Enter для отправки:</div>
+				<div class="hdr">Введите сообщение и нажмите Ctr+Enter или Cmd+Enter для отправки:</div>
 				<textarea id="msgarea" cols="70" rows="5"></textarea>
 				<br/>
 				<div id="sendmsg_div">
