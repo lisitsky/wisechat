@@ -27,11 +27,11 @@
 		.sys {color: gray; font-style: italic;}
 		#chat li {list-style:none; padding: 0 0 0 0.2em;}
 		#error {padding: 1em; background-color: pink; display: none;}
-		#users {width: 250px; float: left; border: solid 1px grey; margin-left: 1em; height: 350px;
+		#users {width: 340px; float: left; border: solid 1px grey; margin-left: 1em; height: 350px;
 				position: relative;  padding: 0 0 0 0.2em;
 		}
 		#users #users_list {border: solid 0px yellow; overflow: auto; height: auto;
-			position: absolute; top:1em; bottom:0; left:0; right:0;
+			position: absolute; top:1.2em; bottom:0; left:0; right:0;
 		}
 		#users #users_list li {list-style:none;  padding: 0 0 0 0.2em;}
 		#logdiv {display: none; border: solid 1px red; float: right; }
@@ -159,7 +159,7 @@
 
 		<div id="logindiv">
 			<div class="hdr">Авторизация</div><br/>
-			Ваше имя: <input type="text" id="user_name" value="Анонимус" /> &nbsp;
+			Ваше имя: <input type="text" id="user_name" value="" maxlength="30 "/> &nbsp;
 			<input type="button" id="enter_chat" value="  Войти в чат " onClick="send_auth()" />
 		</div>
 
@@ -180,7 +180,7 @@
 	</div>
 	</div>
 
-	<div id="users">Пользователи: &nbsp; <abbr id="users_count" title="Авторизовавшиеся">0</abbr> /
+	<div id="users">Пользователи: <abbr id="users_count" title="Авторизовавшиеся">0</abbr> &nbsp; &nbsp; Анонимы:
 		<abbr id="anons_count" title="Анонимы">0</abbr>
 		<div id="users_list">
 		</div>
