@@ -133,15 +133,12 @@
 
 			myWS.onopen = function(evt) {
 				write('WebSocket connected', 'sys');
-				// get archive
 				cmd = {"cmd":"archive"};
 				myWS.send($.toJSON(cmd));
 			};
 
 			myWS.onmessage = function(evt) {
-				// write(evt.data);
 				msg_got(evt.data);
-				//$("<li />").text(evt.data).appendTo("#chat");
 			}
 
 			myWS.onclose = function(evt) {
