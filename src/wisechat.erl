@@ -205,12 +205,14 @@ dispatch_http(_Meth, _Path, Req, _Port) ->
 %% Send error
 %%
 dispatch_http_404(Meth, UrlParts, Req, Port) ->
+	?D({"Dispatch 404, Meth ~p; UrlParts ~p; Req ~p; Port ~p", [Meth, UrlParts, Req, Port]}),
 	Req:respond(404, [{"Content-Type", "text/html"}],
 		[
 			"File /", string:join(UrlParts, "/"), " not found. <br /> \n\r",
-			"Method: " , atom_to_list(Meth),
-			"Server: ", ?SERVERNAME, "/", ?VSN, " at port ", Port
-		]).
+			"Method: " , atom_to_list(Meth), "\n\r",
+			"Server: ", ?SERVERNAME, "/", ?VSN, " at port ", erlang:integer_to_list(Port)
+		])
+	.
 
 
 %%
