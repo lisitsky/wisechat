@@ -147,7 +147,7 @@ stop_work([Node]) ->
 handle_http(Req, Port) ->
 	Meth = Req:get(method),
 	% Host = Req:get(host),
-	Path = Req:resource([lowercase, urldecode]),
+	Path = Req:resource([urldecode]),
 	dispatch_http(Meth, Path, Req, Port).
 
 %%
