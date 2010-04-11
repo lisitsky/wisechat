@@ -61,7 +61,9 @@
 				// empty name is not allowed
 				 $("#error").text("Empty name is not allowed").slideDown(200).fadeTo(2000, 100).slideUp(200);
 			} else {
-				msg = {'cmd': 'auth', 'name': $("#user_name").val()};
+				uname = $("#user_name");
+				//alert(uname.val());
+				var msg = {"cmd": "auth", "name": uname.val()};
 				//alert(myWS);
 				myWS.send($.toJSON(msg));
 			};
