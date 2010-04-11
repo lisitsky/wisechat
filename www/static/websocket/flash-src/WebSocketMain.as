@@ -43,14 +43,20 @@ public class WebSocketMain extends Sprite {
   }
 
   public function create(
-      url:String, protocol:String, proxyHost:String = null, proxyPort:int = 0):WebSocket {
+      url:String, protocol:String,
+      proxyHost:String = null, proxyPort:int = 0,
+      headers:String = null):WebSocket {
     loadPolicyFile(null);
-    return new WebSocket(this, url, protocol, proxyHost, proxyPort);
+    return new WebSocket(this, url, protocol, proxyHost, proxyPort, headers);
   }
 
   public function getOrigin():String {
     return (URLUtil.getProtocol(this.callerUrl) + "://" +
       URLUtil.getServerNameWithPort(this.callerUrl)).toLowerCase();
+  }
+  
+  public function getCallerHost():String {
+    return URLUtil.getServerName(this.callerUrl);
   }
 
   public function loadPolicyFile(url:String):void {
@@ -64,11 +70,11 @@ public class WebSocketMain extends Sprite {
   }
 
   public function log(message:String):void {
-    ExternalInterface.call("webSocketLog", "[WebSocket] " + message);
+    ExternalInterface.call("webSocketLog", encodeURIComponent("[WebSocket] " + message));
   }
 
   public function fatal(message:String):void {
-    ExternalInterface.call("webSocketError", "[WebSocket] " + message);
+    ExternalInterface.call("webSocketError", encodeURIComponent("[WebSocket] " + message));
     throw message;
   }
 
