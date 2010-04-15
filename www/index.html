@@ -160,21 +160,21 @@
 	<div id="msg">
 
 		<div id="logindiv">
-			<div class="hdr">Авторизация</div><br/>
-			Ваше имя: <input type="text" id="user_name" value="" maxlength="30 "/> &nbsp;
-			<input type="button" id="enter_chat" value="  Войти в чат " onClick="send_auth()" />
+			<div class="hdr">Auth</div><br/>
+			Your name: <input type="text" id="user_name" value="" maxlength="30 "/> &nbsp;
+			<input type="button" id="enter_chat" value="  Enter chat " onClick="send_auth()" />
 		</div>
 
 		<div id="error"></div>
 
 		<div id="messagediv">
 			<form id="sendmsg_form">
-				<div class="hdr">Введите сообщение и нажмите Ctr+Enter или Cmd+Enter для отправки:</div>
+				<div class="hdr">Enter your message and press Ctr+Enter or Cmd+Enter to send:</div>
 				<textarea id="msgarea" cols="70" rows="5"></textarea>
 				<br/>
 				<div id="sendmsg_div">
 					<div><!-- &#x2318;&#x23ce; &nbsp;&nbsp; or &nbsp;&nbsp; &#x2303;&#x23ce;  -->
-						<input type="submit" id="sendmsg" value="  Отправить сообщение:  &nbsp;&nbsp; &#x2318;&#x23ce;  or  &#x2303;&#x23ce; " />
+						<input type="submit" id="sendmsg" value="  Send message:  &nbsp;&nbsp; &#x2318;&#x23ce;  or  &#x2303;&#x23ce; " />
 					</div>
 				</div>
 			</form>
@@ -182,13 +182,13 @@
 	</div>
 	</div>
 
-	<div id="users">Пользователи: <abbr id="users_count" title="Авторизовавшиеся">0</abbr> &nbsp; &nbsp; Анонимы:
-		<abbr id="anons_count" title="Анонимы">0</abbr>
+	<div id="users">Users: <abbr id="users_count" title="Auth users">0</abbr> &nbsp; &nbsp; Anonymous:
+		<abbr id="anons_count" title="">0</abbr>
 		<div id="users_list">
 		</div>
 	</div>
 
-	<div id="logdiv">Лог: <br/><div id="log"></div></div>
+	<div id="logdiv">Log: <br/><div id="log"></div></div>
 
 
 
