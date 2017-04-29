@@ -46,19 +46,17 @@ FABridge.TYPE_ANONYMOUS =   4;
 FABridge.initCallbacks = {};
 FABridge.userTypes = {};
 
-FABridge.addToUserTypes = function()
-{
-	for (var i = 0; i < arguments.length; i++)
+FABridge.addToUserTypes = function(...args) {
+	for (var i = 0; i < args.length; i++)
 	{
-		FABridge.userTypes[arguments[i]] = {
-			'typeName': arguments[i], 
+		FABridge.userTypes[args[i]] = {
+			'typeName': args[i], 
 			'enriched': false
 		};
 	}
 }
 
-FABridge.argsToArray = function(args)
-{
+FABridge.argsToArray = args => {
     var result = [];
     for (var i = 0; i < args.length; i++)
     {
@@ -83,8 +81,7 @@ function FABridge__invokeJSFunction(args)
     return bridge.invokeLocalFunction(funcID, throughArgs);
 }
 
-FABridge.addInitializationCallback = function(bridgeName, callback)
-{
+FABridge.addInitializationCallback = (bridgeName, callback) => {
     var inst = FABridge.instances[bridgeName];
     if (inst != undefined)
     {
@@ -170,14 +167,12 @@ FABridge.instances = {};
 FABridge.idMap = {};
 FABridge.refCount = 0;
 
-FABridge.extractBridgeFromID = function(id)
-{
+FABridge.extractBridgeFromID = id => {
     var bridgeID = (id >> 16);
     return FABridge.idMap[bridgeID];
 }
 
-FABridge.attachBridge = function(instance, bridgeName)
-{
+FABridge.attachBridge = (instance, bridgeName) => {
     var newBridgeInstance = new FABridge(instance, bridgeName);
 
     FABridge[bridgeName] = newBridgeInstance;
@@ -214,18 +209,15 @@ FABridge.prototype =
 
 // bootstrapping
 
-    root: function()
-    {
+    root() {
         return this.deserialize(this.target.getRoot());
     },
 //clears all of the AS objects in the cache maps
-    releaseASObjects: function()
-    {
+    releaseASObjects() {
         return this.target.releaseASObjects();
     },
 //clears a specific object in AS from the type maps
-    releaseNamedASObject: function(value)
-    {
+    releaseNamedASObject(value) {
         if(typeof(value) != "object")
         {
             return false;
@@ -237,16 +229,14 @@ FABridge.prototype =
         }
     },
 //create a new AS Object
-    create: function(className)
-    {
+    create(className) {
         return this.deserialize(this.target.create(className));
     },
 
 
     // utilities
 
-    makeID: function(token)
-    {
+    makeID(token) {
         return (this.bridgeID << 16) + token;
     },
 
@@ -254,8 +244,7 @@ FABridge.prototype =
     // low level access to the flash object
 
 //get a named property from an AS object
-    getPropertyFromAS: function(objRef, propName)
-    {
+    getPropertyFromAS(objRef, propName) {
         if (FABridge.refCount > 0)
         {
             throw new Error("You are trying to call recursively into the Flash Player which is not allowed. In most cases the JavaScript setTimeout function, can be used as a workaround.");
@@ -270,8 +259,7 @@ FABridge.prototype =
         }
     },
 //set a named property on an AS object
-    setPropertyInAS: function(objRef,propName, value)
-    {
+    setPropertyInAS(objRef, propName, value) {
         if (FABridge.refCount > 0)
         {
             throw new Error("You are trying to call recursively into the Flash Player which is not allowed. In most cases the JavaScript setTimeout function, can be used as a workaround.");
@@ -287,8 +275,7 @@ FABridge.prototype =
     },
 
 //call an AS function
-    callASFunction: function(funcID, args)
-    {
+    callASFunction(funcID, args) {
         if (FABridge.refCount > 0)
         {
             throw new Error("You are trying to call recursively into the Flash Player which is not allowed. In most cases the JavaScript setTimeout function, can be used as a workaround.");
@@ -303,8 +290,7 @@ FABridge.prototype =
         }
     },
 //call a method on an AS object
-    callASMethod: function(objID, funcName, args)
-    {
+    callASMethod(objID, funcName, args) {
         if (FABridge.refCount > 0)
         {
             throw new Error("You are trying to call recursively into the Flash Player which is not allowed. In most cases the JavaScript setTimeout function, can be used as a workaround.");
@@ -324,14 +310,13 @@ FABridge.prototype =
 
     //callback from flash that executes a local JS function
     //used mostly when setting js functions as callbacks on events
-    invokeLocalFunction: function(funcID, args)
-    {
+    invokeLocalFunction(funcID, args) {
         var result;
         var func = this.localFunctionCache[funcID];
 
         if(func != undefined)
         {
-            result = this.serialize(func.apply(null, this.deserialize(args)));
+            result = this.serialize(func(...this.deserialize(args)));
         }
 
         return result;
@@ -340,13 +325,11 @@ FABridge.prototype =
     // Object Types and Proxies
 	
     // accepts an object reference, returns a type object matching the obj reference.
-    getTypeFromName: function(objTypeName)
-    {
+    getTypeFromName(objTypeName) {
         return this.remoteTypeCache[objTypeName];
     },
     //create an AS proxy for the given object ID and type
-    createProxy: function(objID, typeName)
-    {
+    createProxy(objID, typeName) {
         var objType = this.getTypeFromName(typeName);
 	        instanceFactory.prototype = objType;
 	        var instance = new instanceFactory(objID);
@@ -354,14 +337,12 @@ FABridge.prototype =
         return instance;
     },
     //return the proxy associated with the given object ID
-    getProxy: function(objID)
-    {
+    getProxy(objID) {
         return this.remoteInstanceCache[objID];
     },
 
     // accepts a type structure, returns a constructed type
-    addTypeDataToCache: function(typeData)
-    {
+    addTypeDataToCache(typeData) {
         newType = new ASProxy(this, typeData.name);
         var accessors = typeData.accessors;
         for (var i = 0; i < accessors.length; i++)
@@ -384,8 +365,7 @@ FABridge.prototype =
     },
 
     //add a property to a typename; used to define the properties that can be called on an AS proxied object
-    addPropertyToType: function(ty, propName)
-    {
+    addPropertyToType(ty, propName) {
         var c = propName.charAt(0);
         var setterName;
         var getterName;
@@ -410,33 +390,28 @@ FABridge.prototype =
     },
 
     //add a method to a typename; used to define the methods that can be callefd on an AS proxied object
-    addMethodToType: function(ty, methodName)
-    {
-        ty[methodName] = function()
-        {
-            return this.bridge.deserialize(this.bridge.callASMethod(this.fb_instance_id, methodName, FABridge.argsToArray(arguments)));
+    addMethodToType(ty, methodName) {
+        ty[methodName] = function(...args) {
+            return this.bridge.deserialize(this.bridge.callASMethod(this.fb_instance_id, methodName, FABridge.argsToArray(args)));
         }
     },
 
     // Function Proxies
 
     //returns the AS proxy for the specified function ID
-    getFunctionProxy: function(funcID)
-    {
+    getFunctionProxy(funcID) {
         var bridge = this;
         if (this.remoteFunctionCache[funcID] == null)
         {
-            this.remoteFunctionCache[funcID] = function()
-            {
-                bridge.callASFunction(funcID, FABridge.argsToArray(arguments));
+            this.remoteFunctionCache[funcID] = function(...args) {
+                bridge.callASFunction(funcID, FABridge.argsToArray(args));
             }
         }
         return this.remoteFunctionCache[funcID];
     },
     
     //reutrns the ID of the given function; if it doesnt exist it is created and added to the local cache
-    getFunctionID: function(func)
-    {
+    getFunctionID(func) {
         if (func.__bridge_id__ == undefined)
         {
             func.__bridge_id__ = this.makeID(this.nextLocalFuncID++);
@@ -447,8 +422,7 @@ FABridge.prototype =
 
     // serialization / deserialization
 
-    serialize: function(value)
-    {
+    serialize(value) {
         var result = {};
 
         var t = typeof(value);
@@ -488,8 +462,7 @@ FABridge.prototype =
 
     //on deserialization we always check the return for the specific error code that is used to marshall NPE's into JS errors
     // the unpacking is done by returning the value on each pachet for objects/arrays 
-    deserialize: function(packedValue)
-    {
+    deserialize(packedValue) {
 
         var result;
 
@@ -536,21 +509,18 @@ FABridge.prototype =
         return result;
     },
     //increases the reference count for the given object
-    addRef: function(obj)
-    {
+    addRef(obj) {
         this.target.incRef(obj.fb_instance_id);
     },
     //decrease the reference count for the given object and release it if needed
-    release:function(obj)
-    {
+    release(obj) {
         this.target.releaseRef(obj.fb_instance_id);
     },
 
     // check the given value for the components of the hard-coded error code : __FLASHERROR
     // used to marshall NPE's into flash
     
-    handleError: function(value)
-    {
+    handleError(value) {
         if (typeof(value)=="string" && value.indexOf("__FLASHERROR")==0)
         {
             var myErrorMessage = value.split("||");
@@ -579,26 +549,23 @@ ASProxy = function(bridge, typeName)
 //methods available on each ASProxy object
 ASProxy.prototype =
 {
-    get: function(propName)
-    {
+    get(propName) {
         return this.bridge.deserialize(this.bridge.getPropertyFromAS(this.fb_instance_id, propName));
     },
 
-    set: function(propName, value)
-    {
+    set(propName, value) {
         this.bridge.setPropertyInAS(this.fb_instance_id, propName, value);
     },
 
-    call: function(funcName, args)
-    {
+    call(funcName, args) {
         this.bridge.callASMethod(this.fb_instance_id, funcName, args);
     }, 
     
-    addRef: function() {
+    addRef() {
         this.bridge.addRef(this);
     }, 
     
-    release: function() {
+    release() {
         this.bridge.release(this);
     }
 };

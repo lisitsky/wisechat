@@ -3,12 +3,12 @@
 // Reference: http://dev.w3.org/html5/websockets/
 // Reference: http://tools.ietf.org/html/draft-hixie-thewebsocketprotocol
 
-(function() {
+((() => {
   
   if (window.WebSocket) return;
 
   var console = window.console;
-  if (!console) console = {log: function(){ }, error: function(){ }};
+  if (!console) console = {log() { }, error() { }};
 
   function hasFlash() {
     if ('navigator' in window && 'plugins' in navigator && navigator.plugins['Shockwave Flash']) {
@@ -31,11 +31,11 @@
     var self = this;
     self.readyState = WebSocket.CONNECTING;
     self.bufferedAmount = 0;
-    WebSocket.__addTask(function() {
+    WebSocket.__addTask(() => {
       self.__flash =
         WebSocket.__flash.create(url, protocol, proxyHost || null, proxyPort || 0, headers || null);
 
-      self.__flash.addEventListener("open", function(fe) {
+      self.__flash.addEventListener("open", fe => {
         try {
           if (self.onopen) self.onopen();
         } catch (e) {
@@ -43,7 +43,7 @@
         }
       });
 
-      self.__flash.addEventListener("close", function(fe) {
+      self.__flash.addEventListener("close", fe => {
         try {
           if (self.onclose) self.onclose();
         } catch (e) {
@@ -51,7 +51,7 @@
         }
       });
 
-      self.__flash.addEventListener("message", function(fe) {
+      self.__flash.addEventListener("message", fe => {
         var data = decodeURIComponent(fe.getData());
         try {
           if (self.onmessage) {
@@ -60,7 +60,7 @@
               e = document.createEvent("MessageEvent");
               e.initMessageEvent("message", false, false, data, null, null, window);
             } else { // IE
-              e = {data: data};
+              e = {data};
             }
             self.onmessage(e);
           }
@@ -69,7 +69,7 @@
         }
       });
 
-      self.__flash.addEventListener("stateChange", function(fe) {
+      self.__flash.addEventListener("stateChange", fe => {
         try {
           self.readyState = fe.getReadyState();
           self.bufferedAmount = fe.getBufferedAmount();
@@ -246,7 +246,7 @@
 
   WebSocket.__tasks = [];
 
-  WebSocket.__initialize = function() {
+  WebSocket.__initialize = () => {
     if (!WebSocket.__swfLocation) {
       console.error("[WebSocket] set WebSocket.__swfLocation to location of WebSocketMain.swf");
       return;
@@ -265,11 +265,11 @@
     swfobject.embedSWF(
       WebSocket.__swfLocation, "webSocketFlash", "8", "8", "9.0.0",
       null, {bridgeName: "webSocket"}, null, null,
-      function(e) {
+      e => {
         if (!e.success) console.error("[WebSocket] swfobject.embedSWF failed");
       }
     );
-    FABridge.addInitializationCallback("webSocket", function() {
+    FABridge.addInitializationCallback("webSocket", () => {
       try {
         //console.log("[WebSocket] FABridge initializad");
         WebSocket.__flash = FABridge.webSocket.root();
@@ -284,7 +284,7 @@
     });
   };
 
-  WebSocket.__addTask = function(task) {
+  WebSocket.__addTask = task => {
     if (WebSocket.__flash) {
       task();
     } else {
@@ -308,4 +308,4 @@
     window.attachEvent("onload", WebSocket.__initialize);
   }
   
-})();
+}))();
